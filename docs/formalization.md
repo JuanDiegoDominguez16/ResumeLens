@@ -589,48 +589,256 @@ Representations that are already written in canonical form are therefore mapped 
 
 The normalization stage thus defines a canonical mapping for every qualification representation supported by the extraction vocabulary.
 
-### 3.8 Normalized Qualification Sequence
+### 3.8 Normalized Qualification Set
 
-After the transformations are applied, the resulting canonical qualifications are prepared for the qualification pattern recognition stage.
+After the transformations are applied, the resulting canonical qualifications are prepared as input for the qualification pattern recognition stage.
 
-The normalized qualifications can be organized according to the canonical vocabulary defined for the supported professional profiles. This ensures that equivalent textual representations produce the same sequence of canonical symbols.
+Earlier versions of this document proposed reordering the normalized qualifications according to a canonical order defined by the candidate's professional profile before passing them to the automaton. That approach introduces a dependency that is difficult to justify, the professional profile is precisely the result that the pattern recognition stage in Section 4 is meant to produce, so using it to decide how the input should be arranged beforehand adds an assumption the pipeline should not need.
+
+To avoid this, ResumeLens does not rely on qualification order at all during classification. The normalization stage produces a set of canonical qualification symbols, with duplicates removed, and the finite automata defined in Section 4 are designed so that acceptance depends only on which symbols are present, never on the order in which they were extracted from the resume. Section 4.5 describes the transition mechanism that makes this possible.
 
 For example, a resume containing:
 
     Git, NodeJS, JS, Postgres, React.js
 
-can be normalized to:
+produces the canonical set:
 
-    GIT
-    NODE_JS
-    JAVASCRIPT
-    POSTGRESQL
-    REACT
+    { GIT, NODE_JS, JAVASCRIPT, POSTGRESQL, REACT }
 
-The normalized qualifications may then be organized according to the canonical order defined for the corresponding profile:
+This set may optionally be listed in a fixed, profile independent order, for example alphabetically, purely for readability when the qualifications are displayed or logged later, for instance in the candidate profile visualization of Section 5. This ordering has no effect on the classification result and is not required by the automata.
 
-    JAVASCRIPT
-    REACT
-    NODE_JS
-    POSTGRESQL
-    GIT
-
-This ordering ensures that the classification process does not depend on the order in which qualifications appear in the original resume.
-
-The resulting sequence is then provided as input to the finite automaton used for qualification pattern recognition.
+The resulting set is then provided as input to the finite automata used for qualification pattern recognition.
 
 ### 3.9 Graphical Representation and Implementation
 
 Each finite-state transducer used by ResumeLens will have a graphical representation showing its states, transitions, input representations, and canonical output
 
 ## 4. Qualification Pattern Recognition
-   ### 4.1 Finite Automaton
-   ### 4.2 5-tuple
-   ### 4.3 States
-   ### 4.4 Alphabet
-   ### 4.5 Transition function
-   ### 4.6 Initial and accepting states
-   ### 4.7 Profile patterns
+
+The third stage of ResumeLens consists of recognizing qualification patterns in order to classify a candidate into one of the four professional profiles defined for the system:
+
+    Full Stack Developer
+    Machine Learning Engineer
+    DevOps Engineer
+    Data Engineer
+
+The input of this stage is the set of canonical qualification symbols produced by the normalization stage, as defined in Section 3.8.
+
+The purpose of the finite automata is not to classify a candidate based on a single qualification. Several of the supported profiles share common technologies such as GIT, PYTHON, or SQL, so an individual qualification is never sufficient, by itself, to determine a professional profile. Instead, each automaton recognizes whether the complete combination of core qualifications required by a specific profile is present in the candidate's normalized set, independently of the order in which those qualifications were extracted from the resume.
+
+The classification process can therefore be represented as:
+
+    Extracted qualifications
+        ↓
+    Qualification Normalization
+        ↓
+    Canonical qualification set
+        ↓
+    Finite Automata (one per profile)
+        ↓
+    Candidate Profile Classification
+
+Because classification does not depend on order, the normalized set can be given to each automaton exactly as produced by Section 3, without any profile specific reordering.
+
+### 4.1 Finite Automaton
+
+A deterministic finite automaton (DFA) is used to recognize the qualification pattern associated with each professional profile. ResumeLens defines one DFA per profile, all four sharing the same input alphabet Σ, the full canonical vocabulary defined in Section 2.3, but each with its own states, transition function, and accepting state, since each profile requires a different combination of core qualifications.
+
+A DFA is appropriate here because, for a given state and input symbol, each automaton has a unique next state, which provides deterministic classification once the normalized qualification set is processed.
+
+Each automaton is built around the notion of a requirement slot. A profile's core qualifications are organized into a fixed number of slots, where each slot represents one category of qualification that the profile requires, for example a frontend technology, or a cloud provider, and each slot accepts one or more equivalent symbols, for example the frontend slot accepts REACT, ANGULAR, or VUE. A candidate satisfies a profile's pattern once at least one accepted symbol has been recognized for every slot required by that profile, regardless of the order in which the symbols appear in the candidate's qualification set.
+
+The state of each automaton therefore represents which slots have already been satisfied, not a position in a fixed sequence. This has two consequences. First, the automaton does not depend on any particular ordering of the input symbols, an accepted symbol advances the automaton whenever it is read, regardless of position. Second, symbols that are not part of the current profile's slots, technologies belonging to another profile, or supporting qualifications, leave the automaton in its current state instead of causing rejection, so their presence in the candidate's résumé never prevents an otherwise complete pattern from being recognized.
+
+Conceptually, for a profile with slots s1 through sk:
+
+    State represents: which of s1 ... sk have been satisfied so far
+        ↓ (read a symbol that fills an unfilled slot)
+    State with one additional slot satisfied
+        ↓ (read a symbol that fills an unfilled slot)
+        ...
+    State where all slots s1 ... sk are satisfied
+        ↓
+    Accepting state
+
+### 4.2 5-tuple
+
+The finite automaton used for each profile is formally defined by the 5-tuple:
+
+    M = (Q, Σ, δ, q₀, F)
+
+where:
+
+    Q is the finite set of states.
+    Σ is the input alphabet.
+    δ is the transition function.
+    q₀ is the initial state.
+    F is the set of accepting states.
+
+For a profile whose core qualifications are organized into k slots, the set of states corresponds to the subsets of slots that have been satisfied:
+
+    Q = { q_T : T ⊆ {1, 2, ..., k} }
+
+where q_T denotes the state reached after the slots indexed by T have been satisfied. Since there are k slots, |Q| = 2^k, which is finite, so the automaton remains a valid DFA regardless of how many core qualifications a profile requires.
+
+The transition function is defined as:
+
+    δ : Q × Σ → Q
+
+For every state q_T and every input symbol a ∈ Σ, δ(q_T, a) determines the unique next state, following the rule given in Section 4.5. Because δ is defined for every combination of state and symbol, including symbols that are not part of the profile's slots, the transition function is total, as required for a DFA.
+
+The automaton receives only canonical qualification symbols, representations such as React.js, ReactJS, and React have already been normalized to REACT before entering this stage.
+
+### 4.3 States
+
+For a profile with k core requirement slots, the set of states is:
+
+    Q = { q_T : T ⊆ {1, ..., k} }
+
+The initial state corresponds to the empty subset, no slot has been satisfied yet:
+
+    q₀ = q_∅
+
+The unique accepting state corresponds to the subset containing every slot, all of the profile's core qualifications have been recognized:
+
+    F = { q_{1,...,k} }
+
+Every other state, q_T with T a proper subset of {1,...,k}, represents partial recognition, the candidate has satisfied the slots in T but not yet the remaining ones.
+
+For example, for the Machine Learning Engineer profile, defined in Section 4.7 with seven slots, a candidate whose normalized set contains only PYTHON and PANDAS reaches the state where the Python slot and the data manipulation slot are satisfied, but not the accepting state, because the scikit-learn, deep learning framework, MLMD, SQL, and Git slots remain unsatisfied.
+
+### 4.4 Alphabet
+
+The input alphabet Σ consists of the canonical qualification symbols produced by the normalization stage. The same alphabet is shared by all four automata, and includes:
+
+    JAVASCRIPT
+    TYPESCRIPT
+    REACT
+    ANGULAR
+    VUE
+    NODE_JS
+    DJANGO
+    SPRING_BOOT
+    SQL
+    NOSQL
+    REST_API
+    GIT
+    PYTHON
+    PANDAS
+    NUMPY
+    SCIKIT_LEARN
+    TENSORFLOW
+    PYTORCH
+    MLMD
+    DOCKER
+    AWS
+    AZURE
+    GOOGLE_CLOUD
+    JENKINS
+    GITHUB_ACTIONS
+    GITLAB_CI_CD
+    TERRAFORM
+    ANSIBLE
+    AIRFLOW
+    SPARK
+    POSTGRESQL
+    MYSQL
+    DATABRICKS
+
+For a given profile's automaton, only a subset of Σ is associated with one of its slots, the remaining symbols are still valid input, but they are treated as irrelevant to that particular profile, as defined in Section 4.5.
+
+Σ contains only the canonical symbols for which Sections 2 and 3 currently define an extraction rule and a normalization transformation, the controlled vocabulary established in Section 2.3. Technologies that the profile definitions list only as supporting qualifications, such as Kubernetes, Linux, Prometheus, Grafana, Apache Kafka, MongoDB, or Hadoop, are not part of Σ, no regular expression or transducer transformation has been defined for them, so they are never extracted from a résumé in the first place and never reach this stage. The single exception is PYTHON, which does belong to Σ, since it is already defined as the core qualification of the Machine Learning Engineer profile's programming language slot, even though it is also listed as a supporting qualification for Data Engineer.
+
+### 4.5 Transition Function
+
+Let a profile have slots s1, ..., sk, and let Ai ⊆ Σ denote the set of symbols that satisfy slot si, for example, for the Full Stack Developer frontend slot, Ai = {REACT, ANGULAR, VUE}. No symbol belongs to more than one slot within the same profile, so a given input symbol satisfies at most one slot of that profile.
+
+For a state q_T, where T ⊆ {1,...,k} is the set of slots already satisfied, the transition function is defined as:
+
+    δ(q_T, a) = q_{T ∪ {i}}   if a ∈ Ai for some i ∉ T
+    δ(q_T, a) = q_T            otherwise
+
+The first case covers a symbol that satisfies a slot not yet recognized, the automaton advances by adding that slot to T. The second case covers every other symbol received from Σ, a symbol that satisfies a slot already in T, a redundant qualification, for example a candidate listing both REACT and VUE, or a symbol that belongs to Σ but does not correspond to any of this profile's slots, typically a core qualification from a different profile, such as DOCKER appearing while the Full Stack Developer automaton is running, or PYTHON appearing while the DevOps Engineer automaton is running. In both cases the automaton remains in its current state, it neither advances toward acceptance nor moves away from it. Because Σ only contains the vocabulary defined in Section 2.3, as clarified in Section 4.4, qualifications that were never given extraction or normalization rules, such as Kubernetes or Apache Kafka, never occur as input symbols at all, so the transition function does not need a separate case for them.
+
+This self loop on irrelevant or redundant symbols is what makes the automaton insensitive to order and to the presence of extra qualifications in the candidate's set, only the recognition of a new, still missing slot changes the state.
+
+As a worked example, consider the Full Stack Developer automaton, whose slots are defined in Section 4.7, and a candidate whose normalized qualification set is processed in the following order:
+
+    GIT, SQL, REACT, JAVASCRIPT, NODE_JS, REST_API
+
+The automaton progresses as follows:
+
+    q_∅              ── GIT ──────→   q_{version_control}
+    q_{vc}           ── SQL ──────→   q_{vc, database}
+    q_{vc,db}        ── REACT ────→   q_{vc,db,frontend}
+    q_{vc,db,fe}     ── JAVASCRIPT → q_{vc,db,fe,language}
+    q_{...,lang}     ── NODE_JS ──→   q_{...,backend}
+    q_{...,be}       ── REST_API ─→   q_FULL   (accepting)
+
+Because every symbol in this example fills a slot that had not yet been satisfied, the automaton reaches the accepting state after six transitions, regardless of the order in which GIT, SQL, REACT, JAVASCRIPT, NODE_JS, and REST_API were listed in the résumé. If the candidate's set additionally contained DOCKER or PYTHON, those symbols would simply trigger a self loop at whatever state the automaton was in when they were read, without preventing the Full Stack Developer pattern from being accepted.
+
+### 4.6 Initial and Accepting States
+
+For every profile automaton, the initial state is the one where no slot has been satisfied:
+
+    q₀ = q_∅
+
+The set of accepting states contains a single state, the one where every core slot of the profile has been satisfied:
+
+    F = { q_{1,...,k} }
+
+Because the four profiles have different numbers of slots and different slot definitions, each profile has its own automaton with its own q₀ and F, even though all four automata share the same input alphabet Σ. The four accepting states are referred to as qFS, qML, qDO, and qDE, corresponding to Full Stack Developer, Machine Learning Engineer, DevOps Engineer, and Data Engineer respectively.
+
+A candidate's normalized qualification set is accepted by a given profile's automaton if and only if processing every symbol in the set, in any order, leaves the automaton in that profile's accepting state. If none of the four automata accept the candidate's set, the application treats the candidate as unclassified or insufficiently matched for the four supported profiles.
+
+### 4.7 Profile Patterns
+
+Each profile pattern is defined as a set of requirement slots, together with the canonical symbols that satisfy each slot. The same recognition mechanism, described in Sections 4.1 through 4.6, is applied to every profile, only the slot definitions differ.
+
+#### Full Stack Developer
+
+    Slot 1, programming language:      JAVASCRIPT or TYPESCRIPT
+    Slot 2, frontend:                  REACT or ANGULAR or VUE
+    Slot 3, backend:                   NODE_JS or DJANGO or SPRING_BOOT
+    Slot 4, database:                  SQL or NOSQL
+    Slot 5, REST API:                  REST_API
+    Slot 6, version control:           GIT
+
+Six slots are required, so |Q| = 2^6 = 64 for this automaton, with a single accepting state where all six slots are satisfied. A candidate whose normalized set contains, for example, JAVASCRIPT, REACT, NODE_JS, SQL, REST_API, and GIT satisfies all six slots and is accepted, regardless of the order in which these symbols were extracted.
+
+#### Machine Learning Engineer
+
+    Slot 1, programming language:      PYTHON
+    Slot 2, data manipulation:         PANDAS or NUMPY
+    Slot 3, machine learning library:  SCIKIT_LEARN
+    Slot 4, deep learning framework:   TENSORFLOW or PYTORCH
+    Slot 5, model development:         MLMD
+    Slot 6, database:                  SQL
+    Slot 7, version control:           GIT
+
+Seven slots are required, so |Q| = 2^7 = 128 for this automaton. SQL alone only satisfies slot 6, it does not by itself lead to acceptance, and the same SQL symbol is shared with the Data Engineer automaton without causing any conflict, because each profile runs its own independent automaton.
+
+#### DevOps Engineer
+
+    Slot 1, containerization:            DOCKER
+    Slot 2, cloud provider:              AWS or AZURE or GOOGLE_CLOUD
+    Slot 3, CI/CD:                       JENKINS or GITHUB_ACTIONS or GITLAB_CI_CD
+    Slot 4, infrastructure automation:   TERRAFORM or ANSIBLE
+    Slot 5, version control:             GIT
+
+Five slots are required, so |Q| = 2^5 = 32 for this automaton. Kubernetes, Linux, Prometheus, and Grafana are listed as supporting qualifications for this profile, but none of them are part of Σ, as clarified in Section 4.4, Sections 2 and 3 do not currently define an extraction rule or a normalization transformation for them. They are therefore never extracted from a résumé and never reach this automaton at all.
+
+#### Data Engineer
+
+    Slot 1, query language:              SQL
+    Slot 2, orchestration:               AIRFLOW
+    Slot 3, distributed processing:      SPARK
+    Slot 4, database:                    POSTGRESQL or MYSQL
+    Slot 5, data platform:               DATABRICKS
+
+Five slots are required, so |Q| = 2^5 = 32 for this automaton. As with Machine Learning Engineer, SQL alone only satisfies one of the five slots, so it never causes acceptance by itself. Among the supporting qualifications listed for this profile, PYTHON is part of Σ, since it is already defined as the Machine Learning Engineer's programming language slot, so if it appears in a candidate's set it triggers a self loop in this automaton without contributing to acceptance. Apache Kafka, MongoDB, and Hadoop, by contrast, are not part of Σ, Sections 2 and 3 do not currently define extraction or normalization rules for them, so they never reach this automaton at all.
+
+The four automata are independent of one another and are evaluated separately against the same normalized qualification set. A candidate may therefore be accepted by more than one automaton, if their qualifications happen to satisfy the core requirements of two profiles at once, or by none, if no profile's complete set of core slots is satisfied.
 
 ## 5. Candidate Profile Language
    ### 5.1 Context-Free Grammar
