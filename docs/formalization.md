@@ -841,13 +841,511 @@ Five slots are required, so |Q| = 2^5 = 32 for this automaton. As with Machine L
 The four automata are independent of one another and are evaluated separately against the same normalized qualification set. A candidate may therefore be accepted by more than one automaton, if their qualifications happen to satisfy the core requirements of two profiles at once, or by none, if no profile's complete set of core slots is satisfied.
 
 ## 5. Candidate Profile Language
-   ### 5.1 Context-Free Grammar
-   ### 5.2 Terminals
-   ### 5.3 Non-terminals
-   ### 5.4 Production rules
-   ### 5.5 EBNF representation
-   ### 5.6 Valid and invalid structures
 
+The fourth stage of ResumeLens defines a small domain-specific language for representing the structured information obtained from the previous stages of the system. The purpose of this language is to validate that a candidate profile follows a predefined syntactic structure before it is used for visualization or further processing.
+
+The input to this stage is not the original résumé text. The information has already been extracted using regular expressions, normalized into canonical qualification symbols using the finite-state transducer, and classified using the finite automata defined in the previous sections.
+
+Therefore, the Candidate Profile Language operates on structured information and canonical representations such as `JAVASCRIPT`, `REACT`, `NODE_JS`, `GIT`, and `FULL_STACK_DEVELOPER`.
+
+The process can be represented as:
+
+    Extracted and normalized information
+                |
+                v
+        Candidate Profile Language
+                |
+                v
+          EBNF / textX
+                |
+          +-----+-----+
+          |           |
+        Valid       Invalid
+          |           |
+          v           v
+    Candidate      Parsing
+      Model         Error
+          |
+          v
+    Visualization
+
+### 5.1 Context-Free Grammar and EBNF
+
+The Candidate Profile Language is defined using an Extended Backus-Naur Form (EBNF) grammar. The grammar describes the syntactic structure that a valid candidate profile must follow.
+
+The main non-terminal is `Candidate`, which represents the complete candidate profile. A candidate contains personal information, zero or more education records, zero or more professional experience records, a collection of skills, and zero or more classification results.
+
+The EBNF grammar is defined as follows:
+
+    Candidate
+        = "candidate" "{"
+          PersonalInformation
+          { Education }
+          { Experience }
+          Skills
+          { Classification }
+          "}" ;
+
+    PersonalInformation
+        = "personal" "{"
+          "name" ":" String
+          "email" ":" Email
+          [ "phone" ":" String ]
+          "}" ;
+
+    Education
+        = "education" "{"
+          "degree" ":" String
+          "field" ":" String
+          [ "institution" ":" String ]
+          "}" ;
+
+    Experience
+        = "experience" "{"
+          "position" ":" String
+          "years" ":" Number
+          "}" ;
+
+    Skills
+        = "skills" "{"
+          { Skill }
+          "}" ;
+
+    Skill
+        = "skill" ":" Identifier ;
+
+    Classification
+        = "classification" ":" Identifier ;
+
+    String
+        = '"' { Character } '"' ;
+
+    Email
+        = Identifier "@" Identifier "." Identifier ;
+
+    Number
+        = Digit { Digit } ;
+
+    Identifier
+        = Letter { Letter | Digit | "_" } ;
+
+In this grammar, `Candidate`, `PersonalInformation`, `Education`, `Experience`, `Skills`, `Skill`, and `Classification` are non-terminal symbols that describe the structure of the language.
+
+The terminals are the literal keywords and symbols such as `candidate`, `personal`, `education`, `experience`, `skills`, `classification`, `{`, `}`, `:`, and `"`. The lexical elements `String`, `Email`, `Number`, and `Identifier` represent values that can occur within the candidate profile.
+
+`Classification` is repeated using the same `{ ... }` operator already used for `Education` and `Experience`, directly inside `Candidate`, without a wrapping section keyword. This is a deliberate choice to represent, without extending the grammar any further, the design decision made in Section 4.6, a candidate's normalized qualification set may be accepted by none, one, or several of the four profile automata. A candidate profile with zero `Classification` elements represents an unclassified candidate, one element represents a single accepted profile, and two or more elements represent a candidate accepted by more than one profile.
+
+The grammar is intentionally limited to the structure required by ResumeLens. It does not perform the extraction or normalization of résumé text because those operations have already been performed in previous stages.
+
+### 5.2 Lexical Elements
+
+The lexical elements define the basic values that can appear inside the candidate profile.
+
+`String` represents textual information enclosed in double quotation marks. It is used for values such as names, academic degrees, fields of study, institutions, and professional positions.
+
+`Email` represents an email address using the structure defined by the grammar:
+
+    Identifier "@" Identifier "." Identifier
+
+`Number` represents a non-negative integer composed of one or more digits. It is used to represent the number of years of professional experience.
+
+`Identifier` represents canonical symbols used by the system. In particular, qualifications received by this stage must use the canonical vocabulary defined in Section 3.
+
+Examples of valid canonical qualification identifiers include:
+
+    JAVASCRIPT
+    TYPESCRIPT
+    REACT
+    NODE_JS
+    PYTHON
+    SCIKIT_LEARN
+    POSTGRESQL
+    GIT
+
+Profile classifications reuse the same `Identifier` rule, restricted in practice to the four canonical profile names:
+
+    FULL_STACK_DEVELOPER
+    MACHINE_LEARNING_ENGINEER
+    DEVOPS_ENGINEER
+    DATA_ENGINEER
+
+Each `Classification` element carries exactly one of these identifiers, and, as defined in Section 5.1, the number of `Classification` elements present in a candidate profile corresponds directly to the number of profile automata that accepted that candidate's qualification set.
+
+The grammar therefore does not recognize original résumé representations such as `React.js`, `ReactJS`, or `Node.js` as qualification values. Those representations must have already been converted into their canonical forms during the normalization stage.
+
+### 5.3 Candidate Profile Structure
+
+A valid candidate profile must contain the elements defined by the `Candidate` rule in the order specified by the grammar.
+
+The `personal` section contains the candidate's name and email address, with the phone number being optional.
+
+The `education` section represents academic qualifications. Each education record contains a degree and field of study, while the institution is optional.
+
+The `experience` section represents professional experience. Each experience record contains a position and the number of years of experience.
+
+The `skills` section contains zero or more canonical qualifications. Each qualification is represented using the `skill` keyword followed by a canonical identifier.
+
+Finally, zero or more `classification` elements represent the profile or profiles recognized by the qualification pattern recognition stage, no element present means the candidate did not satisfy any of the four profile patterns, one element means the candidate satisfies exactly one profile, and more than one element means the candidate simultaneously satisfies more than one profile pattern.
+
+A simplified valid profile with a single classification can therefore be represented as:
+
+    candidate {
+        personal {
+            name: "John Doe"
+            email: "john@example.com"
+        }
+
+        education {
+            degree: "Bachelor"
+            field: "Computer Science"
+        }
+
+        experience {
+            position: "Software Developer"
+            years: 3
+        }
+
+        skills {
+            skill: JAVASCRIPT
+            skill: REACT
+            skill: NODE_JS
+            skill: SQL
+            skill: REST_API
+            skill: GIT
+        }
+
+        classification: FULL_STACK_DEVELOPER
+    }
+
+The qualifications in this example are already canonical. No additional normalization is performed by the grammar. Section 5.6 shows equivalent profiles with zero and with more than one classification element.
+
+### 5.4 Repeated Elements
+
+The grammar allows multiple education records, professional experience records, and classification results through the repetition operator `{ ... }`, applied directly inside `Candidate`.
+
+For example, the rule:
+
+    Candidate
+        = "candidate" "{"
+          PersonalInformation
+          { Education }
+          { Experience }
+          Skills
+          { Classification }
+          "}" ;
+
+allows a candidate to have zero or more `Education` elements, zero or more `Experience` elements, and zero or more `Classification` elements.
+
+Similarly, the `Skills` rule contains:
+
+    { Skill }
+
+which allows the candidate to have multiple skills.
+
+This makes the language capable of representing candidates with different numbers of academic qualifications, professional experiences, and technical skills without changing the grammar itself. The same mechanism, applied to `Classification`, is also what allows the language to represent the outcome of Section 4's classification stage without any special case in the grammar, an unclassified candidate, a candidate matching a single profile, and a candidate matching several profiles are all valid `Candidate` instances, they only differ in how many `Classification` elements they contain.
+
+### 5.5 Validation with textX
+
+The EBNF structure is implemented using `textX`, which provides a parser for the Candidate Profile Language and generates a model from valid input.
+
+The validation process consists of the following steps:
+
+    Candidate Profile
+          |
+          v
+      textX Parser
+          |
+       +--+--+
+       |     |
+     Valid Invalid
+       |     |
+       v     v
+    Model   Parsing Error
+
+If the candidate profile follows the grammar, `textX` successfully parses the input and creates the corresponding model.
+
+If the input violates the grammar, the parser rejects the profile and reports a parsing error. This allows ResumeLens to distinguish between structurally valid and invalid candidate profiles.
+
+The textX grammar follows the same conceptual structure as the EBNF specification. The main model is the candidate profile, with nested objects representing personal information, education, experience, skills, and a list of zero or more classification results.
+
+The validation stage does not replace the previous extraction, normalization, or classification stages. Instead, it validates the structure of the information produced by them.
+
+### 5.6 Valid and Invalid Profiles
+
+A valid candidate profile must follow the structure defined by the grammar and use canonical qualification identifiers.
+
+For example, the following skill declarations are valid:
+
+    skill: REACT
+    skill: NODE_JS
+    skill: JAVASCRIPT
+    skill: GIT
+
+The following declaration is not valid for the Candidate Profile Language:
+
+    skill: React.js
+
+because `React.js` is an original representation rather than the canonical symbol `REACT`. The normalization stage should have converted it before the candidate profile was generated.
+
+Since `Classification` now repeats zero or more times, three additional cases are worth illustrating explicitly.
+
+A candidate accepted by more than one profile automaton is a valid profile with more than one `classification` line, for example a candidate whose qualification set satisfies both the Full Stack Developer and the DevOps Engineer patterns defined in Section 4.7:
+
+    candidate {
+        personal {
+            name: "Jane Smith"
+            email: "jane@example.com"
+        }
+
+        skills {
+            skill: JAVASCRIPT
+            skill: REACT
+            skill: NODE_JS
+            skill: REST_API
+            skill: SQL
+            skill: GIT
+            skill: DOCKER
+            skill: AWS
+            skill: JENKINS
+            skill: TERRAFORM
+        }
 ## 6. Relationship Between Formal Models
 
+The formal models used in ResumeLens are connected sequentially. Each model performs a specific transformation or recognition task, and the output of one stage becomes the input of the next stage.
+
+### 6.1 Overall Relationship
+
+The complete relationship between the formal models is represented by the following pipeline:
+
+Raw Resume  
+↓  
+Regular Expressions  
+↓  
+Extracted Resume Information  
+↓  
+Finite-State Transducer  
+↓  
+Normalized Qualification Set  
+↓  
+DFA-based Qualification Pattern Recognition  
+↓  
+Candidate Profile Classification  
+↓  
+CFG / EBNF with textX  
+↓  
+Validated Candidate Profile
+
+Each stage has a specific responsibility within the system. Regular expressions extract relevant information from the raw resume, the finite-state transducer normalizes equivalent qualification representations, the finite automata recognize qualification patterns associated with the defined candidate profiles, and the context-free grammar validates the structure of the resulting candidate profile.
+
+### 6.2 Relationship Between Regular Expressions and the Finite-State Transducer
+
+Regular expressions are applied first to the raw resume text. Their purpose is to identify relevant textual representations of qualifications and other candidate information.
+
+For example, the extraction stage can recognize different representations of the same qualification:
+
+- `JS`
+- `Javascript`
+- `JavaScript`
+
+These representations are extracted as qualification values and passed to the normalization stage.
+
+The finite-state transducer maps equivalent representations to their corresponding canonical symbols:
+
+`JS` → `JAVASCRIPT`  
+`Javascript` → `JAVASCRIPT`  
+`JavaScript` → `JAVASCRIPT`
+
+Therefore, regular expressions identify the representations present in the resume, while the finite-state transducer establishes a canonical representation for them.
+
+### 6.3 Relationship Between the Finite-State Transducer and the DFA
+
+The output of the finite-state transducer is the input to the qualification pattern recognition stage.
+
+The transducer produces canonical qualification symbols such as:
+
+- `JAVASCRIPT`
+- `REACT`
+- `NODE_JS`
+- `SQL`
+- `GIT`
+
+These symbols form the canonical qualification set used by the profile-specific DFAs.
+
+The DFAs operate over this canonical alphabet rather than directly processing the different textual representations that may occur in resumes. This separation allows the recognition stage to work with a controlled and consistent representation of qualifications.
+
+For example, the extracted representations:
+
+`JS, Javascript, JavaScript, React.js, NodeJS`
+
+can be normalized to:
+
+`{JAVASCRIPT, REACT, NODE_JS}`
+
+The corresponding DFA can then process these canonical symbols and update its requirement slots according to the qualification pattern defined for the selected profile.
+
+### 6.4 Relationship Between the DFAs and Candidate Profile Classification
+
+ResumeLens uses one DFA for each defined candidate profile:
+
+- Full Stack Developer
+- Machine Learning Engineer
+- DevOps Engineer
+- Data Engineer
+
+Each DFA uses the same canonical qualification alphabet but defines different requirement slots and accepting conditions.
+
+The input to each DFA is the normalized qualification set produced by the finite-state transducer. The DFA evaluates whether the normalized qualifications satisfy the requirement slots associated with its profile.
+
+If the accepting state is reached, the candidate satisfies the qualification pattern represented by that DFA.
+
+Because the four DFAs are independent, a candidate may be accepted by more than one DFA. If none of the DFAs reaches an accepting state, the candidate is considered unclassified or insufficient with respect to the defined qualification patterns.
+
+### 6.5 Relationship Between Classification and the Candidate Profile Language
+
+The classification results obtained from the DFA stage, together with the extracted and normalized candidate information, are used to construct the structured candidate profile.
+
+The Candidate Profile Language defines the syntax that this structured representation must follow.
+
+For example, the profile may contain:
+
+- Personal information
+- Education
+- Professional experience
+- Skills
+- Classification
+
+The DFA therefore performs qualification-pattern recognition, while the CFG/EBNF defines the syntactic structure of the resulting candidate profile.
+
+The two models consequently address different aspects of the system:
+
+- The DFA determines whether a set of normalized qualifications satisfies a defined profile pattern.
+- The CFG defines how the candidate information must be structured.
+- textX validates whether the resulting profile conforms to that grammar.
+
+### 6.6 Complete Relationship Between the Formal Models
+
+The complete data flow between the formal models can be summarized as follows:
+
+| Stage | Formal Model | Input | Output | Purpose |
+|---|---|---|---|---|
+| 1 | Regular Expressions | Raw resume text | Extracted information | Identify relevant textual patterns |
+| 2 | Finite-State Transducer | Extracted qualification representations | Canonical Qualification Set | Normalize equivalent representations |
+| 3 | DFA | Canonical Qualification Set | Profile classification | Recognize qualification patterns |
+| 4 | CFG / EBNF + textX | Structured candidate information | Valid or invalid profile | Validate syntactic structure |
+
+The models are therefore complementary. No single formal model performs the complete screening process. Instead, each model performs a specific formal operation and produces information that contributes to the subsequent stages of the pipeline..
+
+### 6.7 Separation of Responsibilities
+
+The responsibilities of the formal models are separated as follows:
+
+- **Regular Expressions:** extraction of relevant textual information from resumes.
+- **Finite-State Transducer:** normalization of equivalent qualification representations.
+- **DFA:** recognition of qualification patterns associated with candidate profiles.
+- **CFG / EBNF:** definition of the syntax of the structured candidate profile.
+- **textX:** implementation and validation of the Candidate Profile Language.
+
+This separation allows the different formal components to be developed and tested independently while maintaining a defined relationship between their inputs and outputs.
+
+The resulting architecture combines regular-expression-based extraction, finite-state transformation, finite-state recognition, and context-free syntax validation to transform an unstructured resume into a structured and formally validated candidate profile.
+
 ## 7. Design Decisions and Limitations
+
+The formal models defined for ResumeLens involve several design decisions that establish the scope and behavior of the system. These decisions ensure that the different stages use consistent representations and that the formal models remain clearly separated according to their responsibilities.
+
+### 7.1 Controlled Qualification Vocabulary
+
+ResumeLens uses a controlled vocabulary of qualifications for the extraction and normalization stages. Each qualification can have several recognized textual representations, which are mapped to a single canonical symbol.
+
+For example:
+
+- `JS`, `Javascript`, and `JavaScript` are normalized to `JAVASCRIPT`.
+- `React`, `React.js`, and `ReactJS` are normalized to `REACT`.
+- `NodeJS` and `Node.js` are normalized to `NODE_JS`.
+
+The controlled vocabulary is intentionally limited to the qualifications defined for the four selected candidate profiles. This prevents the normalization and recognition stages from assigning unsupported meanings to arbitrary technologies.
+
+The vocabulary can be extended in future versions by adding new recognized representations and their corresponding canonical symbols.
+
+### 7.2 Separation Between Normalization and Classification
+
+Normalization and classification are treated as independent stages.
+
+The finite-state transducer does not determine which candidate profile a qualification belongs to. Its only responsibility is to transform recognized qualification representations into canonical symbols.
+
+The profile-specific DFAs operate after normalization and use the resulting canonical qualification set to evaluate their corresponding requirement patterns.
+
+This separation prevents profile-specific rules from being embedded into the normalization process and allows the same normalized representation to be evaluated by all four profile-specific DFAs.
+
+### 7.3 Order Independence of Qualifications
+
+The normalized qualification set does not impose a profile-specific ordering on qualifications.
+
+A candidate's qualifications may appear in any order in the original resume. During normalization, duplicate canonical symbols are removed, and the resulting set can be processed independently of the order in which the qualifications appeared.
+
+The profile-specific DFAs therefore track satisfied requirement slots rather than relying on a fixed sequence of qualifications.
+
+This design allows equivalent qualification sets to produce the same recognition result even when their original textual order differs.
+
+### 7.4 Independent Profile Recognition
+
+ResumeLens uses four independent DFAs:
+
+- Full Stack Developer
+- Machine Learning Engineer
+- DevOps Engineer
+- Data Engineer
+
+Each DFA uses the same canonical qualification alphabet but defines its own requirement slots and accepting state.
+
+The input to each DFA is the normalized qualification set produced by the finite-state transducer. The DFA evaluates whether the normalized qualifications satisfy the requirement slots associated with its profile.
+
+If the accepting state is reached, the candidate satisfies the qualification pattern represented by that DFA.
+
+Because the four DFAs are independent, a candidate may be accepted by more than one DFA. If none of the DFAs reaches an accepting state, the candidate is considered unclassified or insufficient with respect to the defined qualification patterns.
+
+### 7.5 Scope of the Qualification Alphabet
+
+The DFA alphabet is restricted to the canonical qualification symbols defined by the controlled vocabulary.
+
+Supporting technologies that were not included in the controlled vocabulary are not part of the DFA alphabet. Therefore, their presence alone does not cause a candidate to satisfy a profile requirement.
+
+For example, technologies such as Kubernetes, Linux, Prometheus, Grafana, Apache Kafka, MongoDB, and Hadoop are treated as supporting technologies and are not used as main qualification requirements in the profile recognition DFAs.
+
+Python is an exception because it is included in the canonical qualification alphabet as a core requirement of the Machine Learning Engineer profile, even though it is also listed as a supporting technology for the Data Engineer profile.
+
+This restriction keeps the formal recognition models deterministic and aligned with the explicitly defined profile requirements.
+
+### 7.6 Candidate Profile Language Input
+
+The Candidate Profile Language operates on structured information produced by the previous stages rather than directly on the raw resume.
+
+In particular, qualifications included in the structured candidate profile use their canonical representations. For example, a normalized qualification is represented as `REACT` rather than `React.js`.
+
+This maintains the separation between textual normalization and syntactic validation. Raw qualification variants are handled by the extraction and normalization stages, while the grammar validates the structure of the resulting candidate profile.
+
+### 7.7 System Limitations
+
+The current formalization has the following limitations:
+
+- The system only recognizes qualifications included in the controlled vocabulary.
+- Qualifications with representations that are not defined by the extraction patterns may not be extracted or normalized.
+- Supporting technologies are not sufficient by themselves to satisfy the main qualification requirements of a profile.
+- The profile recognition stage is based on predefined qualification patterns and does not perform semantic evaluation of a candidate's actual level of expertise.
+- The system does not establish a ranking between candidates or between profile classifications.
+- The formal models do not independently determine the quality, relevance, or truthfulness of the information contained in a resume.
+- The Candidate Profile Language validates the structure of the generated profile, but syntactic validity does not imply that the candidate information is factually correct.
+
+### 7.8 Scope and Future Extensions
+
+The current implementation focuses on demonstrating the integration of regular expressions, finite-state transducers, finite automata, and context-free grammar within the ResumeLens pipeline.
+
+Future extensions could expand the controlled vocabulary, introduce additional candidate profiles, add more qualification representations, and extend the candidate profile language with additional structured information.
+
+Such extensions would preserve the same general architecture:
+
+**Regular Expressions → Finite-State Transducer → DFA → CFG / EBNF**
+
+The formal models can therefore be extended independently while maintaining the defined interfaces between the stages.
+
+
