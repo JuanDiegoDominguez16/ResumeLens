@@ -63,7 +63,20 @@ For a textual pattern represented by a regular expression `R`, the corresponding
 
 where `Σ*` represents the set of possible strings over the resume alphabet.
 
-All expressions used by ResumeLens are compiled with the `re.IGNORECASE` flag. This means that letter case is never a distinguishing factor for a match, `Docker`, `docker`, and `DOCKER` are all recognized by the same expression. As a consequence, alternation with the `|` operator inside a pattern is reserved exclusively for genuine differences in wording, such as an abbreviation versus a full name (`JS` versus `JavaScript`), a spacing or punctuation variant (`Tensor Flow` versus `TensorFlow`, `scikit learn` versus `scikit-learn`), or a short form versus a long form (`GCP` versus `Google Cloud Platform`). It is not used to enumerate capitalization variants, since `re.IGNORECASE` already covers those.
+All expressions used by ResumeLens are compiled with the `re.IGNORECASE` flag. Letter case is handled per representation rather than globally. Qualifications
+whose names are not ordinary English words (for example Docker, Django, or
+PostgreSQL) are matched case-insensitively, so Docker, docker, and DOCKER are
+recognized by the same expression. Qualifications whose names coincide with
+common English words (React, Angular, Vue, REST, Spark, Azure, Airflow,
+Jenkins) and short acronyms (JS, TS, AWS, GCP) are matched case-sensitively,
+because a case-insensitive match would recognize sentences such as "the rest
+of the team" or "able to react quickly" as technical qualifications.
+
+Word boundaries are expressed with the lookarounds (?<![\w.]) and (?![\w])
+instead of \b. The \b assertion treats the dot as a boundary, so \bJS\b
+matches the substring js inside React.js or Node.js. All representations are
+combined into a single expression ordered from the longest to the shortest,
+so that each fragment of the resume is consumed by exactly one representation.
 
 The following regular expressions define the textual representations recognized by the extraction stage for the technical qualifications of the four supported profiles:
 
