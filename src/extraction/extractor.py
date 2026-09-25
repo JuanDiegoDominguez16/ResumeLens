@@ -283,7 +283,7 @@ NAME_PATTERN = re.compile(
             rf"{HS}+"
             rf"(?:{_NAME_PARTICLE}{HS}+)*"
             rf"{_NAME_WORD}"
-        "){{1,4}}"
+        rf"){{1,4}}"
     rf")"
     rf"(?:\*{{1,2}})?"
     rf"[ \t]*$"
