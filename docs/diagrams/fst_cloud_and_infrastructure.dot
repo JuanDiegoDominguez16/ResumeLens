@@ -1,0 +1,24 @@
+digraph fst_cloud_and_infrastructure {
+    rankdir=LR;
+    labelloc="t";
+    label="Stage 2 transducer, Cloud and Infrastructure";
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=10];
+
+    start [shape=none, label="", width=0, height=0];
+    "q0" [shape=circle];
+    "qf" [shape=doublecircle];
+    start -> "q0";
+
+    "q0" -> "qf" [label="Ansible / ANSIBLE"];
+    "q0" -> "qf" [label="AWS / AWS"];
+    "q0" -> "qf" [label="Amazon Web Services / AWS"];
+    "q0" -> "qf" [label="Azure / AZURE"];
+    "q0" -> "qf" [label="Microsoft Azure / AZURE"];
+    "q0" -> "qf" [label="Docker / DOCKER"];
+    "q0" -> "qf" [label="GCP / GOOGLE_CLOUD"];
+    "q0" -> "qf" [label="Google Cloud / GOOGLE_CLOUD"];
+    "q0" -> "qf" [label="Google Cloud Platform / GOOGLE_CLOUD"];
+    "q0" -> "qf" [label="Terraform / TERRAFORM"];
+}

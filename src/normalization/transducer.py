@@ -59,6 +59,10 @@ is built, so a future change that breaks the correspondence with the document
 fails immediately instead of quietly producing a different model.
 """
 
+import shutil
+import subprocess
+from pathlib import Path
+
 from pyformlang.fst import FST
 
 from src.normalization import vocabulary
@@ -79,8 +83,9 @@ def build_transducer(canonical_symbols=None):
 
     With no argument the machine covers the whole controlled vocabulary. Pass a
     collection of canonical symbols to build a machine restricted to them,
-    which is useful for inspecting or testing one qualification category
-    without the other fifty transitions in the way.
+    which is what the per category diagrams use: a picture of all 51 transitions
+    at once is not readable, so each diagram shows the transitions of one
+    qualification category.
 
         build_transducer()                      the complete component
         build_transducer({"REACT", "VUE"})      two qualifications
@@ -245,3 +250,215 @@ def formal_definition(transducer=None):
         "F": frozenset(transducer.final_states),
     }
 
+
+def surface_forms_by_input_symbol():
+    """
+    Group the documented surface representations by the input symbol they fold
+    to, so a diagram edge can be labelled with every spelling it accepts.
+
+        "reactjs" -> ("React.js", "ReactJS")
+        "react"   -> ("React",)
+
+    This is what makes the folding visible in the graphical representation:
+    two spellings on one arrow are two spellings the machine cannot tell apart.
+    """
+
+    grouped = {}
+
+    for canonical in vocabulary.VARIANTS:
+        for representation in vocabulary.representations_of(canonical):
+            grouped.setdefault(vocabulary.fold(representation), []).append(
+                representation
+            )
+
+    return {key: tuple(forms) for key, forms in grouped.items()}
+
+
+# ---------------------------------------------------------------------------
+# GRAPHICAL REPRESENTATION
+# ---------------------------------------------------------------------------
+
+# The assignment requires a graphical representation of the transducers. The
+# DOT below is generated from the transitions of the pyformlang object itself,
+# not drawn by hand, so the picture cannot fall out of step with the machine.
+#
+# pyformlang ships FST.write_as_dot(), which also works. It is not used here
+# because it labels every arrow "input" -> ["OUTPUT"], with the quotes and
+# brackets of the Python repr, while section 3.5 writes transitions as
+# input / OUTPUT. The notation of the document is the one that belongs in a
+# deliverable.
+
+_DOT_HEADER = """\
+digraph {name} {{
+    rankdir=LR;
+    labelloc="t";
+    label={title};
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=10];
+
+    {start_marker} [shape=none, label="", width=0, height=0];
+"""
+
+
+def _quote(text):
+    """Quote a string for DOT, escaping what DOT treats specially."""
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def to_dot(transducer=None, name="fst", title=None):
+    """
+    Render a transducer as DOT.
+
+    Every arrow is labelled in the notation of section 3.5, with the accepted
+    spellings on the left of the slash and the canonical symbol on the right:
+
+        React.js · ReactJS / REACT
+
+    Arrows are sorted by canonical symbol so the picture is stable between
+    runs, which keeps the committed .svg files from changing when nothing about
+    the model changed.
+    """
+
+    if transducer is None:
+        transducer = TRANSDUCER
+
+    if title is None:
+        title = "Qualification normalization transducer"
+
+    surface_forms = surface_forms_by_input_symbol()
+    start_marker = "start"
+
+    lines = [
+        _DOT_HEADER.format(
+            name=name,
+            title=_quote(title),
+            start_marker=start_marker,
+        )
+    ]
+
+    # The initial state, and the accepting state with the double outline that
+    # marks membership in F.
+    for state in sorted(transducer.states):
+        shape = "doublecircle" if state in transducer.final_states else "circle"
+        lines.append(f"    {_quote(state)} [shape={shape}];\n")
+
+    lines.append(f"    {start_marker} -> {_quote(INITIAL_STATE)};\n\n")
+
+    arrows = []
+
+    for (state, input_symbol), arrivals in transducer.transitions.items():
+        next_state, outputs = arrivals[0]
+        canonical = outputs[0]
+
+        spellings = surface_forms.get(input_symbol, (input_symbol,))
+        label = f"{' · '.join(spellings)} / {canonical}"
+
+        arrows.append((canonical, label, state, next_state))
+
+    for _, label, state, next_state in sorted(arrows):
+        lines.append(
+            f"    {_quote(state)} -> {_quote(next_state)} "
+            f"[label={_quote(label)}];\n"
+        )
+
+    lines.append("}\n")
+
+    return "".join(lines)
+
+
+def render_svg(dot_source, destination):
+    """
+    Render DOT to SVG with the Graphviz dot binary.
+
+    Returns True when the file was written, False when Graphviz is not
+    installed. The .dot sources are always written, so a machine without
+    Graphviz can still produce the sources and render them elsewhere.
+    """
+
+    if shutil.which("dot") is None:
+        return False
+
+    result = subprocess.run(
+        ["dot", "-Tsvg", "-o", str(destination)],
+        input=dot_source,
+        text=True,
+        capture_output=True,
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(f"dot failed: {result.stderr.strip()}")
+
+    return True
+
+
+def diagram_specifications():
+    """
+    The diagrams that make up the graphical representation of Stage 2.
+
+    One overview of the complete component, then one diagram per qualification
+    category. The split is a readability decision, not a modelling one: all of
+    them are views of the same transducer, showing different subsets of d and w.
+    The complete machine has 51 transitions between the same two states, and
+    51 labelled arrows drawn on top of each other cannot be read.
+
+    Returns a list of (filename stem, title, canonical symbols or None).
+    """
+
+    specifications = [
+        (
+            "fst_overview",
+            "Stage 2 transducer, complete controlled vocabulary",
+            None,
+        )
+    ]
+
+    for category, canonicals in vocabulary.CATEGORY_OF_CANONICAL.items():
+        stem = "fst_" + category.lower().replace(" ", "_")
+        specifications.append((stem, f"Stage 2 transducer, {category}", set(canonicals)))
+
+    return specifications
+
+
+def write_diagrams(output_directory):
+    """
+    Write every diagram of diagram_specifications() as .dot and, when Graphviz
+    is available, as .svg.
+
+    Returns the list of paths written.
+    """
+
+    directory = Path(output_directory)
+    directory.mkdir(parents=True, exist_ok=True)
+
+    written = []
+
+    for stem, title, canonicals in diagram_specifications():
+
+        transducer = build_transducer(canonicals)
+        dot_source = to_dot(transducer, name=stem, title=title)
+
+        dot_path = directory / f"{stem}.dot"
+        dot_path.write_text(dot_source, encoding="utf-8")
+        written.append(dot_path)
+
+        svg_path = directory / f"{stem}.svg"
+        if render_svg(dot_source, svg_path):
+            written.append(svg_path)
+
+    return written
+
+
+if __name__ == "__main__":
+    # Regenerate the committed diagrams:
+    #     python -m src.normalization.transducer
+    paths = write_diagrams(Path("docs") / "diagrams")
+
+    for path in paths:
+        print(path)
+
+    if not any(path.suffix == ".svg" for path in paths):
+        print(
+            "\nGraphviz was not found, only the .dot sources were written. "
+            "Install it and run this again to refresh the .svg files."
+        )
