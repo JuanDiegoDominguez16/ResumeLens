@@ -1,0 +1,26 @@
+digraph fst_machine_learning_and_data_technologies {
+    rankdir=LR;
+    labelloc="t";
+    label="Stage 2 transducer, Machine Learning and Data Technologies";
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=10];
+
+    start [shape=none, label="", width=0, height=0];
+    "q0" [shape=circle];
+    "qf" [shape=doublecircle];
+    start -> "q0";
+
+    "q0" -> "qf" [label="Airflow / AIRFLOW"];
+    "q0" -> "qf" [label="Apache Airflow / AIRFLOW"];
+    "q0" -> "qf" [label="Databricks / DATABRICKS"];
+    "q0" -> "qf" [label="Machine Learning Model Development · Machine-Learning Model Development / MLMD"];
+    "q0" -> "qf" [label="NumPy / NUMPY"];
+    "q0" -> "qf" [label="Pandas / PANDAS"];
+    "q0" -> "qf" [label="PyTorch · Py Torch / PYTORCH"];
+    "q0" -> "qf" [label="scikit-learn / SCIKIT_LEARN"];
+    "q0" -> "qf" [label="sklearn / SCIKIT_LEARN"];
+    "q0" -> "qf" [label="Apache Spark / SPARK"];
+    "q0" -> "qf" [label="Spark / SPARK"];
+    "q0" -> "qf" [label="TensorFlow · Tensor Flow / TENSORFLOW"];
+}

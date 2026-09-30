@@ -1,0 +1,22 @@
+digraph fst_databases {
+    rankdir=LR;
+    labelloc="t";
+    label="Stage 2 transducer, Databases";
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=10];
+
+    start [shape=none, label="", width=0, height=0];
+    "q0" [shape=circle];
+    "qf" [shape=doublecircle];
+    start -> "q0";
+
+    "q0" -> "qf" [label="MySQL / MYSQL"];
+    "q0" -> "qf" [label="NoSQL / NOSQL"];
+    "q0" -> "qf" [label="NoSQL DB / NOSQL"];
+    "q0" -> "qf" [label="NoSQL database / NOSQL"];
+    "q0" -> "qf" [label="NoSQL databases / NOSQL"];
+    "q0" -> "qf" [label="PostgreSQL / POSTGRESQL"];
+    "q0" -> "qf" [label="Postgres / POSTGRESQL"];
+    "q0" -> "qf" [label="SQL / SQL"];
+}
