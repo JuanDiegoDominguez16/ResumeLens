@@ -179,3 +179,24 @@ JS, React.js, NodeJS, Postgres, Git."""
         finding.text
         for finding in result["Tools and Technologies"]
     ] == ["Git"]
+
+def test_email():
+    text = "john.doe@example.com"
+
+    result = extract_resume(text)
+
+    emails = result["Contact Information"]["email"]
+
+    assert len(emails) == 1
+    assert emails[0].text == "john.doe@example.com"
+
+
+def test_email_with_plus():
+    text = "john+resume@example.co"
+
+    result = extract_resume(text)
+
+    emails = result["Contact Information"]["email"]
+
+    assert len(emails) == 1
+    assert emails[0].text == "john+resume@example.co"
