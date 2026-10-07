@@ -1,0 +1,7 @@
+candidate {
+    skills {
+        skill: GIT
+    }
+
+    classification: FULL_STACK_DEVELOPER
+}

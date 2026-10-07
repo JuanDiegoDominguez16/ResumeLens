@@ -1,0 +1,15 @@
+candidate {
+    personal {
+        name: "Wednesday Addams"
+        email: wednesday.addams@example.com
+    }
+
+    experience {
+        position: "Web Developer"
+        years: three
+    }
+
+    skills {
+        skill: GIT
+    }
+}
