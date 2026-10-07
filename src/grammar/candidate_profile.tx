@@ -1,0 +1,38 @@
+Candidate:
+    'candidate' '{'
+        personal=PersonalInformation
+        educations*=Education
+        experiences*=Experience
+        skills=Skills
+        classifications*=Classification
+    '}';
+
+PersonalInformation:
+    'personal' '{'
+        'name' ':' name=STRING
+        'email' ':' email=EMAIL
+        ('phone' ':' phone=STRING)?
+    '}';
+
+Education:
+    'education' '{'
+        'degree' ':' degree=STRING
+        'field' ':' field=STRING
+        ('institution' ':' institution=STRING)?
+    '}';
+
+Experience:
+    'experience' '{'
+        'position' ':' position=STRING
+        'years' ':' years=INT
+    '}';
+
+Skills:
+    'skills' '{'
+        skills*=Skill
+    '}';
+
+Skill: 'skill' ':' symbol=ID;
+Classification: 'classification' ':' profile=ID;
+
+EMAIL: /[\w.+-]+@[\w-]+(\.[\w-]+)*\.[A-Za-z]{2,}/;

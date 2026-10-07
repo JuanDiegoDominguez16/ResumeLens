@@ -1,0 +1,11 @@
+candidate {
+    personal {
+        name: "Wednesday Addams"
+        email: wednesday.addams@example.com
+    }
+
+    skills {
+        skill: React.js
+        skill: NodeJS
+    }
+}
