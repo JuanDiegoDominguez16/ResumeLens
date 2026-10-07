@@ -1,0 +1,22 @@
+candidate {
+    personal {
+        name: "Jane Smith"
+        email: jane@example.com
+    }
+
+    skills {
+        skill: AWS
+        skill: DOCKER
+        skill: GIT
+        skill: JAVASCRIPT
+        skill: JENKINS
+        skill: NODE_JS
+        skill: REACT
+        skill: REST_API
+        skill: SQL
+        skill: TERRAFORM
+    }
+
+    classification: DEVOPS_ENGINEER
+    classification: FULL_STACK_DEVELOPER
+}

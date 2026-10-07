@@ -1,0 +1,14 @@
+candidate {
+    personal {
+        name: "Carlos Mena"
+        email: carlos.mena@example.com
+    }
+
+    experience {
+        position: "Software Developer"
+        years: 1
+    }
+
+    skills {
+    }
+}

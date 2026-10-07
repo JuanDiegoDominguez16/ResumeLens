@@ -1,0 +1,16 @@
+candidate {
+    personal {
+        name: "Mary Jane Watson"
+        email: mj.watson@example.com
+    }
+
+    skills {
+        skill: GIT
+        skill: NUMPY
+        skill: PANDAS
+        skill: PYTHON
+        skill: SCIKIT_LEARN
+        skill: SQL
+        skill: TENSORFLOW
+    }
+}
