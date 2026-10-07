@@ -1013,7 +1013,7 @@ A simplified valid profile with a single classification can therefore be represe
     candidate {
         personal {
             name: "John Doe"
-            email: "john@example.com"
+            email: john@example.com
         }
 
         education {
@@ -1115,7 +1115,7 @@ A candidate accepted by more than one profile automaton is a valid profile with 
     candidate {
         personal {
             name: "Jane Smith"
-            email: "jane@example.com"
+            email: jane@example.com
         }
 
         skills {
@@ -1130,6 +1130,34 @@ A candidate accepted by more than one profile automaton is a valid profile with 
             skill: JENKINS
             skill: TERRAFORM
         }
+
+        classification: DEVOPS_ENGINEER
+        classification: FULL_STACK_DEVELOPER
+    }
+
+A candidate whose qualification set satisfied no profile pattern is also a valid profile. It carries no `classification` element at all, and the `skills` block may itself be empty, which is what a résumé stating no qualification of the controlled vocabulary produces:
+
+    candidate {
+        personal {
+            name: "Carlos Mena"
+            email: carlos.mena@example.com
+        }
+
+        skills {
+        }
+    }
+
+An unclassified candidate is therefore not represented by a special value such as `classification: NONE`, and the language has no symbol for it. The absence of the element is the representation, which keeps the grammar free of a case that Section 4.6 already describes as one of three ordinary outcomes.
+
+Finally, `Email` is a lexical element of its own, defined in Section 5.2 as `Identifier "@" Identifier "." Identifier`, and is therefore written without quotation marks, unlike the values whose rule is `String`:
+
+    email: jane@example.com      valid, an Email
+    email: "jane@example.com"    rejected, a String where an Email is expected
+
+The distinction is deliberate. A quoted value is opaque to the grammar, while an `Email` is a structure the parser checks, so an address missing its `@` or its dot is rejected by the lexical rule rather than by a later check in Python. The same reasoning applies to `years`, which is a `Number` rather than a quoted string.
+
+The complete set of valid and rejected profiles used as fixtures is in `examples/`, one file per case, with the rule each rejected file violates listed in `examples/README.md`.
+
 ## 6. Relationship Between Formal Models
 
 The formal models used in ResumeLens are connected sequentially. Each model performs a specific transformation or recognition task, and the output of one stage becomes the input of the next stage.
@@ -1368,5 +1396,3 @@ Such extensions would preserve the same general architecture:
 **Regular Expressions → Finite-State Transducer → DFA → CFG / EBNF**
 
 The formal models can therefore be extended independently while maintaining the defined interfaces between the stages.
-
-
