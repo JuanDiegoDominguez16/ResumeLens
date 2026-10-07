@@ -26,17 +26,22 @@ nothing on its own; what it has to do is fail when the code is wrong. Section
 
 ## 2. Test Inventory
 
-185 tests, run with `pytest` from the repository root.
+187 tests, run with `pytest` from the repository root.
 
 | File | Tests | Covers |
 |---|---|---|
-| `test/extraction/extractor_test.py` | 15 | Stage 1, names, contact, degrees, experience, the assignment example |
+| `test/extraction/extractor_test.py` | 17 | Stage 1, names, contact, degrees, experience, the assignment example |
 | `test/normalization/vocabulary_test.py` | 23 | folding, lookup, the alphabets, coverage of every extractor pattern |
 | `test/normalization/transducer_test.py` | 25 | the 7-tuple, translation, restricted machines, the import guards |
 | `test/normalization/normalizer_test.py` | 18 | the stage API, duplicates, discards, order independence |
 | `test/classification/profiles_test.py` | 38 | the four patterns against section 4.7, the disjointness invariant |
 | `test/classification/automata_test.py` | 47 | the 5-tuple, δ totality, the worked example, self loops |
 | `test/classification/classifier_test.py` | 19 | the stage API, multiple acceptance, unclassified, no ranking |
+
+
+The Stage 1 scenarios are listed in `extraction.md` section 5, next to the
+patterns they guard, rather than repeated here. Section 3.2 below is the other
+half of that stage's coverage, reached from Stage 2.
 
 `test/normalization/conftest.py` provides the fixtures that enumerate every
 concrete string the extraction patterns can produce; several tests need them,
