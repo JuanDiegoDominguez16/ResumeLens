@@ -311,6 +311,12 @@ the grammar in `formalization.md` section 5.1.
 | an unbalanced brace | rejected, syntactically invalid |
 | an unknown keyword in place of a section name | rejected |
 
+This section was written before the stage existed. One expectation in 8.4 did
+not survive the implementation: an empty résumé cannot produce a valid
+profile, because the `Email` rule of section 5.2 requires an `@` and a dot and
+therefore has no empty form. The generator raises instead of inventing an
+address, and the row below was corrected to say so.
+
 ### 8.3 Generation and Visualization
 
 | Scenario | Expected |
@@ -326,4 +332,5 @@ the grammar in `formalization.md` section 5.1.
 |---|---|
 | each of the five sample résumés | traverses all four stages without error |
 | an accepted candidate | the classification in the rendered profile matches what Stage 3 reported |
-| an empty résumé | reaches Stage 4 and produces a valid, unclassified profile |
+| an empty résumé | raises `IncompleteProfile`: the language has no way to write "no email address" |
+| a résumé whose first line is not a name | renders `name: ""`, which still validates |
