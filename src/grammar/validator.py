@@ -72,21 +72,58 @@ class InvalidProfile(Exception):
         line      1-based line of the offending token, or None
         column    1-based column, or None
         source    the profile that was rejected, for context
+        path      the file it came from, when it came from one
     """
 
-    def __init__(self, message, line=None, column=None, source=None):
+    def __init__(self, message, line=None, column=None, source=None,
+                 path=None):
         super().__init__(message)
 
         self.message = message
         self.line = line
         self.column = column
         self.source = source
+        self.path = path
 
     def __str__(self):
-        if self.line is None:
-            return self.message
+        where = f"line {self.line}, column {self.column}" \
+            if self.line is not None else None
 
-        return f"line {self.line}, column {self.column}: {self.message}"
+        if self.path is not None:
+            where = f"{self.path}, {where}" if where else str(self.path)
+
+        return f"{where}: {self.message}" if where else self.message
+
+    def excerpt(self):
+        """
+        The offending line with a caret under the offending column:
+
+            email: wednesday.addams.example.com
+                   ^
+
+        None when there is no position to point at, or when the position falls
+        outside the text, which should not happen but would otherwise raise
+        here rather than where the real problem is.
+
+        A parser error is only useful if the person can find the token it is
+        talking about. A line and a column are enough for an editor, but a
+        profile shown in the Streamlit interface is not an editor, so the stage
+        carries the excerpt itself rather than leaving every caller to rebuild
+        it from the source.
+        """
+
+        if self.source is None or self.line is None or self.column is None:
+            return None
+
+        lines = self.source.splitlines()
+
+        if not 1 <= self.line <= len(lines):
+            return None
+
+        offending = lines[self.line - 1]
+        caret = " " * max(self.column - 1, 0) + "^"
+
+        return f"{offending}\n{caret}"
 
 
 # The metamodel is built once and reused. Building it parses the grammar
@@ -139,10 +176,21 @@ def validate_file(path):
     Parse a candidate profile stored in a file, such as the fixtures in
     examples/. The file is read as UTF-8 and handed to validate(), so a profile
     on disk and a profile in memory follow exactly the same path.
+
+    A rejection carries the file name as well as the position, since an error
+    that says only "line 4" is not much help when eight fixtures were checked
+    in a row.
     """
 
     with open(path, encoding="utf-8") as handle:
-        return validate(handle.read())
+        source = handle.read()
+
+    try:
+        return validate(source)
+
+    except InvalidProfile as error:
+        error.path = path
+        raise
 
 
 def is_valid(source):
