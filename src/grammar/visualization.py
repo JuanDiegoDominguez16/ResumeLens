@@ -48,47 +48,63 @@ from html import escape
 
 NOT_STATED = "not stated"
 
-# The style is deliberately small: a readable serif column with a little
-# spacing. The assignment asks for a short visualization that opens in a
-# browser, and a document that depends on a stylesheet it cannot find is not
-# that, so everything is embedded in the file.
+# The style is deliberately small: one readable column, one accent colour for
+# the section headings and the canonical symbols. The assignment asks for a
+# short visualization that opens in a browser, and a document that depends on a
+# stylesheet it cannot find is not that, so everything is embedded in the file.
+#
+# The background is set explicitly rather than left to the browser. The
+# interface embeds this document in an iframe, which inherits the surrounding
+# page's background, so a document that only sets its text colour turns dark
+# text on a dark page when the viewer's Streamlit theme is dark.
 
 STYLE = """\
+    html { background: #ffffff; }
     body {
-        font-family: Georgia, 'Times New Roman', serif;
-        line-height: 1.5;
+        font-family: 'Plus Jakarta Sans', 'Manrope', 'Segoe UI', system-ui,
+                     -apple-system, Arial, sans-serif;
+        line-height: 1.55;
         margin: 2rem auto;
         max-width: 42rem;
-        padding: 0 1rem;
-        color: #222;
+        padding: 0 1.2rem 2rem;
+        background: #ffffff;
+        color: #1f2430;
     }
-    h1 { margin-bottom: 0.2rem; }
+    h1 {
+        margin: 0 0 0.15rem;
+        font-size: 1.9rem;
+        letter-spacing: -0.01em;
+    }
     h2 {
-        font-size: 1.05rem;
+        font-size: 0.78rem;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        border-bottom: 1px solid #ccc;
-        padding-bottom: 0.2rem;
-        margin-top: 2rem;
+        letter-spacing: 0.12em;
+        color: #6d28d9;
+        border-bottom: 2px solid #ede9fb;
+        padding-bottom: 0.3rem;
+        margin: 1.8rem 0 0.7rem;
     }
-    .contact { color: #555; margin-top: 0; }
+    .contact { color: #5a6272; margin: 0 0 0.4rem; font-size: 0.95rem; }
     .symbol {
-        font-family: 'Courier New', monospace;
-        font-size: 0.9rem;
-        background: #f2f2f2;
-        border: 1px solid #ddd;
-        padding: 0.1rem 0.4rem;
+        font-family: 'Consolas', 'Courier New', monospace;
+        font-size: 0.82rem;
+        background: #f4f1fb;
+        border: 1px solid #ddd6f3;
+        border-radius: 3px;
+        color: #4c1d95;
+        padding: 0.15rem 0.45rem;
         display: inline-block;
-        margin: 0.1rem 0.2rem 0.1rem 0;
+        margin: 0.12rem 0.25rem 0.12rem 0;
     }
-    .record { margin-bottom: 0.8rem; }
-    .empty { color: #777; font-style: italic; }
+    .record { margin: 0 0 0.7rem; }
+    .record strong { color: #1f2430; }
+    .empty { color: #7a8294; font-style: italic; }
     footer {
-        margin-top: 2.5rem;
-        border-top: 1px solid #ccc;
-        padding-top: 0.6rem;
-        font-size: 0.85rem;
-        color: #666;
+        margin-top: 2.4rem;
+        border-top: 1px solid #e6e8ee;
+        padding-top: 0.7rem;
+        font-size: 0.8rem;
+        color: #7a8294;
     }
 """
 

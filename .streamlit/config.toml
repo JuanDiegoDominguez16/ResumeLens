@@ -1,0 +1,22 @@
+# Interface theme.
+#
+# The theme is fixed in the repository rather than left to whoever runs the
+# application, because the interface is also the demonstration of the project:
+# a reviewer whose Streamlit is set to dark mode would otherwise see a
+# different application than the one the team built and documented.
+#
+# The accent colour is used by Streamlit for the active tab, the links and the
+# focus rings; src/grammar/visualization.py uses the same violet for the
+# section headings and the canonical symbols of the generated document, so the
+# page and the document it embeds read as one piece.
+
+[theme]
+base = "light"
+primaryColor = "#6D28D9"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4F1FB"
+textColor = "#1F2430"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
