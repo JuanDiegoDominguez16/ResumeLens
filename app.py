@@ -33,16 +33,13 @@ from src.grammar import visualization
 from src.normalization import transducer, vocabulary
 from src.pipeline import run
 
-# The browser tab carries the mark alone, which is what the brand
-# specification asks of the favicon: the plane and the lens, no wordmark, since
-# at sixteen pixels the name would be a smudge. assets/resumelens-mark.svg is
-# the source the .png was exported from, and is the file to edit.
+# The tab icon is an emoji rather than the project's own mark, because
+# page_icon takes either an emoji or the path to an image file, and the mark is
+# drawn as inline SVG in LENS_ICON below. Exporting it to a .png only so that
+# the browser tab could show it would add a binary file to the repository whose
+# source lives somewhere else, and the two would drift apart.
 
-st.set_page_config(
-    page_title="ResumeLens",
-    page_icon="assets/resumelens-mark.png",
-    layout="wide",
-)
+st.set_page_config(page_title="ResumeLens", page_icon="🔎", layout="wide")
 
 
 # ---------------------------------------------------------------------------

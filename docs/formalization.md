@@ -861,6 +861,16 @@ Five slots are required, so |Q| = 2^5 = 32 for this automaton. As with Machine L
 
 The four automata are independent of one another and are evaluated separately against the same normalized qualification set. A candidate may therefore be accepted by more than one automaton, if their qualifications happen to satisfy the core requirements of two profiles at once, or by none, if no profile's complete set of core slots is satisfied.
 
+
+### 4.8 Transition Diagrams
+
+Each of the four automata has a transition diagram in `docs/diagrams/`, as `dfa_full_stack_developer.svg`, `dfa_machine_learning_engineer.svg`, `dfa_devops_engineer.svg` and `dfa_data_engineer.svg`.
+
+Each diagram draws the complete state set of Section 4.3, arranged in levels by the number of slots satisfied, with q₀ at the top and the single accepting state of Section 4.6 at the bottom as a double circle. An arrow represents a transition that fills a slot, labelled with the number of that slot as Section 4.7 lists them, and the legend under the diagram gives the symbols that satisfy each one.
+
+Two simplifications are made, and both are stated in the caption of every diagram. The self loops of Section 4.5 are not drawn: δ is total, so each state also has an arrow to itself for every symbol that fills no new slot, which for the Full Stack Developer automaton alone would add 1,728 arrows carrying no information. And an arrow stands for a slot rather than for a symbol, since the symbols that satisfy the same slot produce transitions with the same source and the same target.
+
+The diagrams are generated from the slot definitions of Section 4.7 rather than drawn by hand, so a change to a profile changes its diagram. `docs/classification.md` Section 5.5 describes how.
 ## 5. Candidate Profile Language
 
 The fourth stage of ResumeLens defines a small domain-specific language for representing the structured information obtained from the previous stages of the system. The purpose of this language is to validate that a candidate profile follows a predefined syntactic structure before it is used for visualization or further processing.

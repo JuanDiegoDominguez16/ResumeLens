@@ -61,7 +61,10 @@ in this module compares profiles or ranks them; classifier.py collects the four
 answers without combining them into a score.
 """
 
+import shutil
+import subprocess
 from itertools import chain, combinations
+from pathlib import Path
 
 from pyformlang.finite_automaton import DeterministicFiniteAutomaton, State, Symbol
 
@@ -336,3 +339,209 @@ def _check_automata():
 
 
 _check_automata()
+
+# ---------------------------------------------------------------------------
+# DIAGRAMS
+# ---------------------------------------------------------------------------
+
+# The transition diagram section 4 asks for, one per profile.
+#
+# WHAT IS DRAWN, AND WHAT IS LEFT OUT
+#
+# The states are the 2^k subsets of section 4.3, every one of them, arranged in
+# levels by how many slots they have satisfied: q0 alone at the top, the single
+# accepting state alone at the bottom. An arrow is drawn for each transition
+# that advances the automaton, labelled with the slot it fills.
+#
+# The self loops are not drawn. Section 4.5 makes d total, so every state has
+# an arrow back to itself for each of the 33 symbols that does not fill a new
+# slot, which for the Full Stack Developer automaton is 64 states times 27
+# symbols. Drawing them would add 1,728 arrows that all say the same thing and
+# would leave nothing else visible. The caption of each diagram states that
+# they are there, and automata_test.py asserts it on the machine itself rather
+# than on the picture.
+#
+# An arrow stands for a slot rather than for a symbol for the same reason: the
+# frontend slot of section 4.7 accepts REACT, ANGULAR and VUE, which are three
+# transitions with the same source, the same target and the same meaning. The
+# symbols behind each slot are listed in the legend.
+
+_DOT_HEADER = """\
+digraph {name} {{
+    rankdir=TB;
+    labelloc="t";
+    label={title};
+    fontname="Helvetica";
+    node [shape=circle, fontname="Helvetica", fontsize=10, width=0.3];
+    edge [fontname="Helvetica", fontsize=8, arrowsize=0.6];
+
+    start [shape=none, label="", width=0, height=0];
+"""
+
+
+def _quote(text):
+    """Quote a string for DOT, escaping what DOT treats specially."""
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+def _quote_label(text):
+    """
+    Quote a caption for DOT, leaving its backslash escapes alone.
+
+    The caption carries DOT's own line breaks, \\n for a centred line and
+    \\l for a left aligned one, so unlike a node name it must not have its
+    backslashes doubled: that is what turns a line break into the two
+    characters printed on the picture.
+    """
+
+    return '"' + text.replace('"', '\\"') + '"'
+
+
+def to_dot(profile, name=None, title=None):
+    """
+    Render one profile's automaton as DOT.
+
+        >>> source = to_dot(PROFILE_BY_KEY["DATA_ENGINEER"])
+        >>> source.startswith("digraph")
+        True
+
+    The accepting state is drawn as a double circle, as section 4.6 defines a
+    single one, and the arrow with no source marks q0.
+    """
+
+    name = name or profile.key.lower()
+    title = title or f"{profile.name}, M = (Q, S, d, q0, F)"
+
+    accepting = accepting_subset(profile)
+
+    legend = "\\l".join(
+        f"slot {index + 1}, {slot.name}: " + " or ".join(sorted(slot.symbols))
+        for index, slot in enumerate(profile.slots)
+    )
+
+    caption = (
+        f"{title}\\n"
+        f"|Q| = 2^{profile.slot_count} = {profile.state_count} states, "
+        f"|S| = {len(ALPHABET)} symbols, q0 = q0, F = {{{profile.state_label}}}\\n"
+        f"Arrows show the transitions that fill a slot. The self loops that "
+        f"make d total, section 4.5, are not drawn.\\n\\l{legend}\\l"
+    )
+
+    lines = [_DOT_HEADER.format(name=name, title=_quote_label(caption))]
+
+    # The states, grouped by how many slots they have satisfied, so that the
+    # lattice reads from q0 downwards instead of as a cloud.
+
+    by_level = {}
+
+    for subset in all_subsets(profile):
+        by_level.setdefault(len(subset), []).append(subset)
+
+    for level in sorted(by_level):
+
+        lines.append("    { rank=same;")
+
+        for subset in by_level[level]:
+
+            shape = "doublecircle" if subset == accepting else "circle"
+            label = state_label(profile, subset)
+
+            lines.append(
+                f" {_quote(label)} [shape={shape}, "
+                f"label={_quote(label)}];"
+            )
+
+        lines.append(" }\n")
+
+    lines.append(f"    start -> {_quote(state_label(profile, frozenset()))};\n")
+
+    # The advancing transitions: from every state, one arrow per slot it has
+    # not satisfied yet.
+
+    for subset in all_subsets(profile):
+
+        source = state_label(profile, subset)
+
+        for index, slot in enumerate(profile.slots):
+
+            if index in subset:
+                continue
+
+            target = state_label(profile, subset | {index})
+
+            lines.append(
+                f"    {_quote(source)} -> {_quote(target)} "
+                f"[label={_quote(str(index + 1))}];\n"
+            )
+
+    lines.append("}\n")
+
+    return "".join(lines)
+
+
+def render_svg(dot_source, destination):
+    """
+    Render DOT to SVG with the Graphviz dot binary.
+
+    Returns True when the file was written, False when Graphviz is not
+    installed. The .dot sources are always written, so a machine without
+    Graphviz can still produce them and render them elsewhere.
+    """
+
+    if shutil.which("dot") is None:
+        return False
+
+    result = subprocess.run(
+        ["dot", "-Tsvg", "-o", str(destination)],
+        input=dot_source,
+        text=True,
+        capture_output=True,
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(f"dot failed: {result.stderr.strip()}")
+
+    return True
+
+
+def write_diagrams(output_directory):
+    """
+    Write the transition diagram of each of the four profiles as .dot and,
+    when Graphviz is available, as .svg.
+
+    Returns the list of paths written.
+    """
+
+    directory = Path(output_directory)
+    directory.mkdir(parents=True, exist_ok=True)
+
+    written = []
+
+    for profile in PROFILES:
+
+        stem = "dfa_" + profile.key.lower()
+        dot_source = to_dot(profile, name=stem)
+
+        dot_path = directory / f"{stem}.dot"
+        dot_path.write_text(dot_source, encoding="utf-8")
+        written.append(dot_path)
+
+        svg_path = directory / f"{stem}.svg"
+        if render_svg(dot_source, svg_path):
+            written.append(svg_path)
+
+    return written
+
+
+if __name__ == "__main__":
+    # Regenerate the committed diagrams:
+    #     python -m src.classification.automata
+    paths = write_diagrams(Path("docs") / "diagrams")
+
+    for path in paths:
+        print(path)
+
+    if not any(path.suffix == ".svg" for path in paths):
+        print(
+            "\nGraphviz was not found, only the .dot sources were written. "
+            "Install it and run this again to refresh the .svg files."
+        )

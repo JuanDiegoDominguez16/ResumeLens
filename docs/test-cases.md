@@ -26,7 +26,7 @@ nothing on its own; what it has to do is fail when the code is wrong. Section
 
 ## 2. Test Inventory
 
-187 tests, run with `pytest` from the repository root.
+348 tests, run with `pytest` from the repository root.
 
 | File | Tests | Covers |
 |---|---|---|
@@ -37,6 +37,11 @@ nothing on its own; what it has to do is fail when the code is wrong. Section
 | `test/classification/profiles_test.py` | 38 | the four patterns against section 4.7, the disjointness invariant |
 | `test/classification/automata_test.py` | 47 | the 5-tuple, δ totality, the worked example, self loops |
 | `test/classification/classifier_test.py` | 19 | the stage API, multiple acceptance, unclassified, no ranking |
+| `test/grammar/validator_test.py` | 25 | the model textX builds, the optional and repeated elements, section 8.1 |
+| `test/grammar/rejection_test.py` | 46 | the eight rejected fixtures, one broken rule at a time, section 8.2 |
+| `test/grammar/generator_test.py` | 32 | the round trip from the stage results to a profile the grammar accepts |
+| `test/grammar/visualization_test.py` | 30 | the HTML and Markdown documents, the empty cases, escaping |
+| `test/pipeline_test.py` | 28 | the four stages end to end, section 8.4 |
 
 
 The Stage 1 scenarios are listed in `extraction.md` section 5, next to the
@@ -281,11 +286,13 @@ than illustrative, the change is small and local: adding `POSTGRESQL` and
 no test of the formal model and nothing in Stages 1, 2 or 4 depends on the
 particular slot contents.
 
-## 8. Scenarios for Stage 4, Not Yet Implemented
+## 8. Scenarios, Stage 4
 
-Stage 4 is the candidate profile language. These scenarios are written here in
-advance so the implementation has a specification to work against, following
-the grammar in `formalization.md` section 5.1.
+Stage 4 is the candidate profile language, implemented in `src/grammar/`.
+These scenarios were written before the stage existed, as a specification for
+it to be built against, and the tests that cover each one now exist. Where the
+implementation showed an expectation to be wrong, the row was corrected rather
+than quietly dropped, and the reason is recorded above section 8.3.
 
 ### 8.1 Valid Profiles
 
