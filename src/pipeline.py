@@ -20,21 +20,27 @@ caring where they came from. Wiring them together is this module's only job.
         |    accepted profiles, and the slots that were missing
         v
     Stage 4  candidate profile language                 docs/formalization.md 5
-             not implemented yet, see below
+             the profile written in the DSL, validated, and rendered
 
 
-STAGE 4 IS NOT WIRED IN YET
+STAGE 4 AND THE RESUMES IT CANNOT REPRESENT
 
-The candidate profile language is the remaining stage, and the place it plugs
-into is marked in `run` below. When src/grammar/ exists it will take the
-PipelineResult produced here, render it as a candidate profile document,
-validate it against the textX grammar, and add the validated profile and its
-HTML visualization to the result.
+The fourth stage runs in three steps, each in its own module: the generator
+writes the results of the first three stages as a candidate profile, the
+validator parses it, and the visualization renders the model.
 
-Nothing else in the pipeline has to change for that: the three stages below
-already produce everything Stage 4 needs, which is the candidate information
-from Stage 1, the canonical qualifications from Stage 2, and the accepted
-profile keys from Stage 3.
+A resume that states no email address has no representation in the language,
+since the Email rule of section 5.2 has no empty form, and the generator
+raises IncompleteProfile rather than inventing an address. That is not an
+error of the run: the first three stages produced their results and those
+results are worth showing. The pipeline therefore catches it, leaves the
+profile fields empty, and records the reason in `profile_error`.
+
+An InvalidProfile is not caught. The profile the validator rejected would be
+one this system had just written itself, so a rejection means the generator
+and the grammar disagree, which is a defect rather than a property of the
+resume. Letting it propagate is what makes the tests of that disagreement
+fail loudly instead of silently producing a result with no profile in it.
 """
 
 from dataclasses import dataclass
@@ -45,6 +51,9 @@ from src.extraction.extractor import (
     qualification_strings,
     to_serializable,
 )
+from src.grammar import visualization
+from src.grammar.generator import IncompleteProfile, render
+from src.grammar.validator import validate
 from src.normalization.normalizer import normalize
 
 
@@ -59,16 +68,24 @@ class PipelineResult:
     here, and docs/architecture.md section 7 lists that traceability as a
     design principle.
 
-    resume_text     the input, unchanged
-    extraction      Stage 1, the structured extraction result
-    normalization   Stage 2, the canonical set plus what was discarded and why
-    classification  Stage 3, one answer per profile
+    resume_text        the input, unchanged
+    extraction         Stage 1, the structured extraction result
+    normalization      Stage 2, the canonical set plus what was discarded
+    classification     Stage 3, one answer per profile
+    profile_source     Stage 4, the profile written in the DSL, or None
+    candidate_profile  Stage 4, the model textX built from it, or None
+    visualization      Stage 4, the HTML document, or None
+    profile_error      why there is no profile, when there is none
     """
 
     resume_text: str
     extraction: dict
     normalization: object
     classification: object
+    profile_source: str = None
+    candidate_profile: object = None
+    visualization: str = None
+    profile_error: str = None
 
     @property
     def qualifications(self):
@@ -90,15 +107,28 @@ class PipelineResult:
         """The candidate's name, or None when the resume did not state one."""
         return self.extraction["Candidate"]["name"]
 
+    @property
+    def has_profile(self):
+        """
+        True when Stage 4 produced a validated profile.
+
+        False is a result, not a failure: it means the resume did not state
+        something the language requires, and `profile_error` says what.
+        """
+
+        return self.candidate_profile is not None
+
     def as_dict(self):
         """
         A JSON-ready view of the run, for saving a result to a file or for
         handing the extraction output to another tool.
 
         Only the extraction part needs converting: its values are Finding
-        objects. The other two stages are summarized rather than serialized
-        whole, since their dataclasses carry Profile and Slot objects that
-        have no useful JSON form.
+        objects. The other three stages are summarized rather than serialized
+        whole, since their dataclasses carry Profile and Slot objects, and the
+        textX model carries parser state, that have no useful JSON form. The
+        profile is represented by its source, which is the form the language
+        defines and the only one that can be read back.
         """
 
         return {
@@ -119,22 +149,27 @@ class PipelineResult:
                 for entry in self.classification.results
             ],
             "accepted_profiles": list(self.accepted_keys),
+            "candidate_profile": self.profile_source,
+            "profile_error": self.profile_error,
         }
 
 
 def run(resume_text):
     """
-    Run a resume through the pipeline.
+    Run a resume through the four stages.
 
-        >>> result = run("Ana Torres\\nSkills: TypeScript, Angular, "
-        ...              "Spring Boot, NoSQL databases, REST APIs, Git.")
+        >>> result = run("Ana Torres\\nana@example.com\\nSkills: TypeScript, "
+        ...              "Angular, Spring Boot, NoSQL databases, REST APIs, Git.")
         >>> result.accepted_keys
         ('FULL_STACK_DEVELOPER',)
+        >>> result.has_profile
+        True
 
     An empty or unrecognizable resume is not an error: extraction finds
     nothing, normalization produces the empty set, and every automaton stays
     in its initial state, so the candidate comes back unclassified with every
-    slot listed as missing.
+    slot listed as missing. Stage 4 then reports that the resume states no
+    email address, and the first three stages are returned as they are.
     """
 
     extraction = extract_resume(resume_text)
@@ -143,18 +178,26 @@ def run(resume_text):
 
     classification = classify(normalization.qualification_set)
 
-    # Stage 4 goes here, once src/grammar/ exists:
-    #
-    #     profile_source = generator.render(extraction, normalization,
-    #                                       classification)
-    #     candidate_profile = validator.validate(profile_source)
-    #     visualization = visualization.to_html(candidate_profile)
-    #
-    # and the three results join PipelineResult as further fields.
+    try:
+        profile_source = render(extraction, normalization, classification)
+
+    except IncompleteProfile as error:
+        return PipelineResult(
+            resume_text=resume_text,
+            extraction=extraction,
+            normalization=normalization,
+            classification=classification,
+            profile_error=str(error),
+        )
+
+    candidate_profile = validate(profile_source)
 
     return PipelineResult(
         resume_text=resume_text,
         extraction=extraction,
         normalization=normalization,
         classification=classification,
+        profile_source=profile_source,
+        candidate_profile=candidate_profile,
+        visualization=visualization.to_html(candidate_profile),
     )

@@ -185,6 +185,9 @@ ResumeLens/
 │   ├── normalization/
 │   ├── classification/
 │   └── grammar/
+├── examples/
+│   ├── valid/
+│   └── invalid/
 ├── test/
 │   ├── extraction/
 │   ├── normalization/
@@ -197,7 +200,7 @@ ResumeLens/
 └── .gitignore
 ```
 
-The `docs/` directory contains the project's technical documentation, including the graphical representations of the transducers and automata under `docs/diagrams/`. `src/` contains the implementation of the formal language components, one package per stage, and `test/` mirrors that structure with the unit and integration tests. `app.py` provides the Streamlit application that connects the different components.
+The `docs/` directory contains the project's technical documentation, including the graphical representations of the transducers and automata under `docs/diagrams/`. `src/` contains the implementation of the formal language components, one package per stage, and `test/` mirrors that structure with the unit and integration tests. `app.py` provides the Streamlit application that connects the different components. `examples/` holds candidate profiles written in the Stage 4 language, the valid ones and the ones that must be rejected, described in `examples/README.md`.
 
 The test directory is named `test/`, in the singular, which is the value configured in `pytest.ini`. Tests are run from the repository root with `pytest`, and `pythonpath = .` in `pytest.ini` is what allows them to import the `src` packages.
 

@@ -861,6 +861,16 @@ Five slots are required, so |Q| = 2^5 = 32 for this automaton. As with Machine L
 
 The four automata are independent of one another and are evaluated separately against the same normalized qualification set. A candidate may therefore be accepted by more than one automaton, if their qualifications happen to satisfy the core requirements of two profiles at once, or by none, if no profile's complete set of core slots is satisfied.
 
+
+### 4.8 Transition Diagrams
+
+Each of the four automata has a transition diagram in `docs/diagrams/`, as `dfa_full_stack_developer.svg`, `dfa_machine_learning_engineer.svg`, `dfa_devops_engineer.svg` and `dfa_data_engineer.svg`.
+
+Each diagram draws the complete state set of Section 4.3, arranged in levels by the number of slots satisfied, with q₀ at the top and the single accepting state of Section 4.6 at the bottom as a double circle. An arrow represents a transition that fills a slot, labelled with the number of that slot as Section 4.7 lists them, and the legend under the diagram gives the symbols that satisfy each one.
+
+Two simplifications are made, and both are stated in the caption of every diagram. The self loops of Section 4.5 are not drawn: δ is total, so each state also has an arrow to itself for every symbol that fills no new slot, which for the Full Stack Developer automaton alone would add 1,728 arrows carrying no information. And an arrow stands for a slot rather than for a symbol, since the symbols that satisfy the same slot produce transitions with the same source and the same target.
+
+The diagrams are generated from the slot definitions of Section 4.7 rather than drawn by hand, so a change to a profile changes its diagram. `docs/classification.md` Section 5.5 describes how.
 ## 5. Candidate Profile Language
 
 The fourth stage of ResumeLens defines a small domain-specific language for representing the structured information obtained from the previous stages of the system. The purpose of this language is to validate that a candidate profile follows a predefined syntactic structure before it is used for visualization or further processing.
@@ -1013,7 +1023,7 @@ A simplified valid profile with a single classification can therefore be represe
     candidate {
         personal {
             name: "John Doe"
-            email: "john@example.com"
+            email: john@example.com
         }
 
         education {
@@ -1115,7 +1125,7 @@ A candidate accepted by more than one profile automaton is a valid profile with 
     candidate {
         personal {
             name: "Jane Smith"
-            email: "jane@example.com"
+            email: jane@example.com
         }
 
         skills {
@@ -1130,6 +1140,34 @@ A candidate accepted by more than one profile automaton is a valid profile with 
             skill: JENKINS
             skill: TERRAFORM
         }
+
+        classification: DEVOPS_ENGINEER
+        classification: FULL_STACK_DEVELOPER
+    }
+
+A candidate whose qualification set satisfied no profile pattern is also a valid profile. It carries no `classification` element at all, and the `skills` block may itself be empty, which is what a résumé stating no qualification of the controlled vocabulary produces:
+
+    candidate {
+        personal {
+            name: "Carlos Mena"
+            email: carlos.mena@example.com
+        }
+
+        skills {
+        }
+    }
+
+An unclassified candidate is therefore not represented by a special value such as `classification: NONE`, and the language has no symbol for it. The absence of the element is the representation, which keeps the grammar free of a case that Section 4.6 already describes as one of three ordinary outcomes.
+
+Finally, `Email` is a lexical element of its own, defined in Section 5.2 as `Identifier "@" Identifier "." Identifier`, and is therefore written without quotation marks, unlike the values whose rule is `String`:
+
+    email: jane@example.com      valid, an Email
+    email: "jane@example.com"    rejected, a String where an Email is expected
+
+The distinction is deliberate. A quoted value is opaque to the grammar, while an `Email` is a structure the parser checks, so an address missing its `@` or its dot is rejected by the lexical rule rather than by a later check in Python. The same reasoning applies to `years`, which is a `Number` rather than a quoted string.
+
+The complete set of valid and rejected profiles used as fixtures is in `examples/`, one file per case, with the rule each rejected file violates listed in `examples/README.md`.
+
 ## 6. Relationship Between Formal Models
 
 The formal models used in ResumeLens are connected sequentially. Each model performs a specific transformation or recognition task, and the output of one stage becomes the input of the next stage.
@@ -1368,5 +1406,3 @@ Such extensions would preserve the same general architecture:
 **Regular Expressions → Finite-State Transducer → DFA → CFG / EBNF**
 
 The formal models can therefore be extended independently while maintaining the defined interfaces between the stages.
-
-

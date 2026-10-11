@@ -123,6 +123,8 @@ later change to the patterns could legitimately leave a symbol unused.
 | `missing_slots(profile, symbols)` | a set of symbols | the slots left unsatisfied, in section 4.7 order |
 | `state_label(profile, subset)` | a state | `"q0"`, `"q{2,4}"` or the profile's accepting label |
 | `formal_definition(profile)` | a `Profile` | a dict with `Q`, `Sigma`, `delta`, `q0`, `F` |
+| `to_dot(profile, name, title)` | a `Profile` | the transition diagram as DOT |
+| `write_diagrams(output_directory)` | a directory | the `.dot` and `.svg` files written |
 
 Constant: `ALPHABET`, the 33 canonical symbols, sorted so construction is
 reproducible.
@@ -177,6 +179,39 @@ Symbols outside Γ are ignored rather than raising, since Stage 2 only ever
 produces canonical symbols and this can only happen when a caller builds a set
 by hand.
 
+
+### 5.5 Diagrams
+
+Four diagrams, one per profile, in `docs/diagrams/dfa_*.svg`. Each one draws
+the complete state set of section 4.3, arranged in levels by how many slots
+the state has satisfied: `q0` alone at the top, the single accepting state of
+section 4.6 alone at the bottom as a double circle.
+
+Two things are deliberately not drawn, and the caption of each diagram says
+so.
+
+**The self loops.** Section 4.5 makes δ total, so every state has an arrow
+back to itself for each symbol that fills no new slot. For the Full Stack
+Developer automaton that is 64 states times 27 symbols, 1,728 arrows that all
+say the same thing and would leave nothing else visible. That δ is total is
+asserted on the machine itself, over all 8448 `(state, symbol)` pairs, which
+is a stronger check than a reader counting arrows on a picture.
+
+**One arrow per symbol.** An arrow stands for the slot it fills rather than
+for a symbol, because the frontend slot accepts `REACT`, `ANGULAR` and `VUE`,
+which are three transitions with the same source, the same target and the
+same meaning. The symbols behind each slot are listed in the legend under the
+diagram.
+
+The DOT is generated from the slot definitions rather than drawn by hand, so
+a change to a profile changes its picture. Regenerate with:
+
+```bash
+python -m src.classification.automata
+```
+
+The `.dot` sources are always written; the `.svg` files need Graphviz on the
+machine, and the committed ones were rendered with it.
 ## 6. `classifier.py`
 
 ### 6.1 Contract
