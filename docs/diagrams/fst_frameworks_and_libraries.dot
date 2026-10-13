@@ -1,0 +1,22 @@
+digraph fst_frameworks_and_libraries {
+    rankdir=LR;
+    labelloc="t";
+    label="Stage 2 transducer, Frameworks and Libraries";
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=10];
+
+    start [shape=none, label="", width=0, height=0];
+    "q0" [shape=circle];
+    "qf" [shape=doublecircle];
+    start -> "q0";
+
+    "q0" -> "qf" [label="Angular / ANGULAR"];
+    "q0" -> "qf" [label="Django / DJANGO"];
+    "q0" -> "qf" [label="Node.js · NodeJS / NODE_JS"];
+    "q0" -> "qf" [label="React / REACT"];
+    "q0" -> "qf" [label="React.js · ReactJS / REACT"];
+    "q0" -> "qf" [label="Spring Boot · SpringBoot / SPRING_BOOT"];
+    "q0" -> "qf" [label="Vue / VUE"];
+    "q0" -> "qf" [label="Vue.js · VueJS / VUE"];
+}

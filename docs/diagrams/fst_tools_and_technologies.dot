@@ -1,0 +1,18 @@
+digraph fst_tools_and_technologies {
+    rankdir=LR;
+    labelloc="t";
+    label="Stage 2 transducer, Tools and Technologies";
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=10];
+
+    start [shape=none, label="", width=0, height=0];
+    "q0" [shape=circle];
+    "qf" [shape=doublecircle];
+    start -> "q0";
+
+    "q0" -> "qf" [label="GitHub Actions / GITHUB_ACTIONS"];
+    "q0" -> "qf" [label="GitLab CI / GITLAB_CI_CD"];
+    "q0" -> "qf" [label="GitLab CI/CD / GITLAB_CI_CD"];
+    "q0" -> "qf" [label="Jenkins / JENKINS"];
+}

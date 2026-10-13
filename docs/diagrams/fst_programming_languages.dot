@@ -1,0 +1,19 @@
+digraph fst_programming_languages {
+    rankdir=LR;
+    labelloc="t";
+    label="Stage 2 transducer, Programming Languages";
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=10];
+
+    start [shape=none, label="", width=0, height=0];
+    "q0" [shape=circle];
+    "qf" [shape=doublecircle];
+    start -> "q0";
+
+    "q0" -> "qf" [label="JS / JAVASCRIPT"];
+    "q0" -> "qf" [label="JavaScript / JAVASCRIPT"];
+    "q0" -> "qf" [label="Python / PYTHON"];
+    "q0" -> "qf" [label="TS / TYPESCRIPT"];
+    "q0" -> "qf" [label="TypeScript / TYPESCRIPT"];
+}

@@ -1,0 +1,30 @@
+candidate {
+    personal {
+        name: "Ana Torres"
+        email: ana.torres@example.com
+        phone: "+57 315 987 6543"
+    }
+
+    education {
+        degree: "Ingeniería de Sistemas"
+        field: "Computer Science"
+        institution: "Universidad Icesi"
+    }
+
+    experience {
+        position: "Web Platform Developer"
+        years: 5
+    }
+
+    skills {
+        skill: ANGULAR
+        skill: DOCKER
+        skill: GIT
+        skill: NOSQL
+        skill: REST_API
+        skill: SPRING_BOOT
+        skill: TYPESCRIPT
+    }
+
+    classification: FULL_STACK_DEVELOPER
+}

@@ -1,0 +1,17 @@
+digraph fst_apis_and_software_development_technologies {
+    rankdir=LR;
+    labelloc="t";
+    label="Stage 2 transducer, APIs and Software Development Technologies";
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=10];
+
+    start [shape=none, label="", width=0, height=0];
+    "q0" [shape=circle];
+    "qf" [shape=doublecircle];
+    start -> "q0";
+
+    "q0" -> "qf" [label="REST / REST_API"];
+    "q0" -> "qf" [label="REST API / REST_API"];
+    "q0" -> "qf" [label="REST APIs / REST_API"];
+}

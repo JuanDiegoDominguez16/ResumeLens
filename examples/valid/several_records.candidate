@@ -1,0 +1,45 @@
+candidate {
+    personal {
+        name: "Sofía Ramírez"
+        email: sofia.ramirez@example.com
+        phone: "+57 300 555 1212"
+    }
+
+    education {
+        degree: "Ingeniería de Sistemas"
+        field: "Computer Science"
+        institution: "Universidad Icesi"
+    }
+
+    education {
+        degree: "Master"
+        field: "Data Science"
+    }
+
+    experience {
+        position: "Data Engineer"
+        years: 4
+    }
+
+    experience {
+        position: "Machine Learning Engineer"
+        years: 2
+    }
+
+    skills {
+        skill: AIRFLOW
+        skill: DATABRICKS
+        skill: GIT
+        skill: MLMD
+        skill: PANDAS
+        skill: POSTGRESQL
+        skill: PYTHON
+        skill: PYTORCH
+        skill: SCIKIT_LEARN
+        skill: SPARK
+        skill: SQL
+    }
+
+    classification: DATA_ENGINEER
+    classification: MACHINE_LEARNING_ENGINEER
+}

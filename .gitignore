@@ -1,0 +1,40 @@
+# Python bytecode and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Test and coverage output
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Streamlit local state
+.streamlit/secrets.toml
+
+# Rendered diagrams are committed as .svg, keep intermediate renders out
+docs/diagrams/*.png
+docs/diagrams/*.tmp
+
+# Editor and IDE state
+# .vscode/settings.json is tracked on purpose: it records the shared
+# interpreter and test configuration for the team.
+.vscode/*
+!.vscode/settings.json
+.idea/
+.obsidian/
+*.code-workspace
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini

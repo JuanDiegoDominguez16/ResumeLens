@@ -1,0 +1,9 @@
+candidate {
+    personal {
+        name: "Wednesday Addams"
+    }
+
+    skills {
+        skill: GIT
+    }
+}
