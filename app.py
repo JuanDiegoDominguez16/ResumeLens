@@ -479,14 +479,33 @@ with extraction_tab:
             "No academic qualifications found.",
         )
 
+    
     with experience_column:
         section("Professional experience")
         experience = result.extraction["Professional Experience"]
-        show_table(
-            finding_rows(experience["years"])
-            + finding_rows(experience["date_ranges"]),
-            "No experience statements found.",
-        )
+        records = experience.get("records", [])
+
+        if records:
+            show_table(
+                [
+                    {
+                        "Position": record.get("title") or "Not specified",
+                        "Company": record.get("company") or "Not specified",
+                        "Start date": record.get("start_date") or "Not specified",
+                        "End date": record.get("end_date") or "Not specified",
+                        "Description": record.get("description") or "Not specified",
+                    }
+                    for record in records
+                ],
+                "No experience records found.",
+            )
+        else:
+            show_table(
+                finding_rows(experience["years"])
+                + finding_rows(experience["date_ranges"]),
+                "No experience statements found.",
+            )
+
 
     section("Technical qualifications")
     technical = [
